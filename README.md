@@ -4,16 +4,16 @@ A powerful CLI tool and Express middleware for monitoring Shopify changelog upda
 
 ## Features
 
-- ✅ Monitor Shopify changelog for new updates
-- ✅ **Multiple notification channels**: Slack, Microsoft Teams, Email, Generic Webhooks (PagerDuty, etc.)
-- ✅ **Smart filtering**: Category filters, keyword matching, exclusion rules
-- ✅ **Priority detection**: Automatically flag critical updates (breaking changes, security, etc.)
-- ✅ **Configuration file support**: JSON or JavaScript config files
-- ✅ **Dry run mode**: Test without sending actual notifications
-- ✅ CLI tool for one-time checks or continuous monitoring
-- ✅ Express middleware for integration into Node.js applications
-- ✅ Docker support for easy deployment
-- ✅ Persistent state tracking to avoid duplicate notifications
+- Monitor Shopify changelog for new updates
+- **Multiple notification channels**: Slack, Microsoft Teams, Email, Generic Webhooks (PagerDuty, etc.)
+- **Smart filtering**: Category filters, keyword matching, exclusion rules
+- **Priority detection**: Automatically flag critical updates (breaking changes, security, etc.)
+- **Configuration file support**: JSON or JavaScript config files
+- **Dry run mode**: Test without sending actual notifications
+- CLI tool for one-time checks or continuous monitoring
+- Express middleware for integration into Node.js applications
+- Docker support for easy deployment
+- Persistent state tracking to avoid duplicate notifications
 
 ## Installation
 
