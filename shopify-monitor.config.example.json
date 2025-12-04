@@ -1,0 +1,39 @@
+{
+  "webhooks": {
+    "slack": [
+      "https://hooks.slack.com/services/YOUR/WEBHOOK/URL"
+    ],
+    "teams": [
+      "https://outlook.office.com/webhook/YOUR/WEBHOOK/URL"
+    ],
+    "email": {
+      "host": "smtp.gmail.com",
+      "port": 587,
+      "secure": false,
+      "auth": {
+        "user": "your-email@gmail.com",
+        "pass": "your-app-password"
+      },
+      "from": "Shopify Monitor <monitor@example.com>",
+      "to": ["recipient1@example.com", "recipient2@example.com"]
+    },
+    "generic": [
+      {
+        "url": "https://your-api.com/webhooks/shopify",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/json",
+          "X-API-Key": "your-api-key"
+        }
+      }
+    ]
+  },
+  "checkInterval": 15,
+  "stateFile": "./shopify-monitor-state.json",
+  "filters": {
+    "categories": ["API", "Apps"],
+    "keywords": ["breaking", "deprecated"],
+    "excludeKeywords": []
+  },
+  "dryRun": false
+}

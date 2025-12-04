@@ -1,0 +1,53 @@
+# Source files
+src/
+tsconfig.json
+
+# Development files
+.claude/
+examples/
+*.log
+*.md
+!README.md
+
+# Test files
+test/
+tests/
+*.test.js
+*.test.ts
+*.spec.js
+*.spec.ts
+
+# Configuration examples
+*.example.*
+.env.example
+
+# State files
+shopify-monitor-state.json
+shopify-monitor.config.js
+shopify-monitor.config.json
+
+# Docker files
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Git files
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# QA and development docs
+QA-REPORT.md
+QUICKSTART.md
+
+# Node modules
+node_modules/

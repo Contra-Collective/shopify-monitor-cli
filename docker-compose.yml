@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  shopify-monitor:
+    build: .
+    container_name: shopify-changelog-monitor
+    restart: unless-stopped
+    volumes:
+      - ./data:/app/data
+      - ./config:/app/config:ro
+    environment:
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL}
+      - TEAMS_WEBHOOK_URL=${TEAMS_WEBHOOK_URL}
+      - CHECK_INTERVAL=${CHECK_INTERVAL:-15}
+      - STATE_FILE_PATH=/app/data/shopify-monitor-state.json
+    # Override command to use environment variables
+    command: >
+      sh -c "node dist/cli.js watch
+      --slack $${SLACK_WEBHOOK_URL}
+      --teams $${TEAMS_WEBHOOK_URL}
+      --interval $${CHECK_INTERVAL}
+      --state-file $${STATE_FILE_PATH}"
+
+  # Alternative: Using config file
+  shopify-monitor-with-config:
+    build: .
+    container_name: shopify-changelog-monitor-config
+    restart: unless-stopped
+    profiles:
+      - config-mode
+    volumes:
+      - ./data:/app/data
+      - ./shopify-monitor.config.js:/app/shopify-monitor.config.js:ro
+    command: node dist/cli.js watch --config /app/shopify-monitor.config.js
