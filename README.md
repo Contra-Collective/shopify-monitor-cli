@@ -17,51 +17,44 @@ A powerful CLI tool and Express middleware for monitoring Shopify changelog upda
 
 ## Installation
 
-### Global Installation (Recommended for CLI usage)
-
 ```bash
-npm install -g shopify-changelog-monitor
-```
-
-After installation, the `shopify-monitor` command will be available globally.
-
-### Local Project Installation
-
-```bash
-npm install shopify-changelog-monitor
-```
-
-### From Source
-
-```bash
+# Clone the repository
 git clone https://github.com/Contra-Collective/shopify-monitor-cli.git
 cd shopify-monitor-cli
+
+# Install dependencies
 npm install
+
+# Build the TypeScript source
 npm run build
+
+# Link for local development (optional)
 npm link
 ```
 
+After running `npm link`, you can use the `shopify-monitor` command globally on your system, and it will use your local development version.
+
+**Note:** The repository includes example files in the `examples/` directory and configuration templates.
+
 ## Quick Start
 
-### CLI Usage
+After cloning and building the repository, you can run commands using the CLI:
 
 ```bash
-# Check once with Slack
-shopify-monitor check --slack https://hooks.slack.com/services/YOUR/WEBHOOK/URL
+# Run in development mode with ts-node
+npm run dev check -- --slack https://hooks.slack.com/services/YOUR/WEBHOOK/URL
+npm run dev watch -- --config shopify-monitor.config.js
 
-# Watch continuously with config file
-shopify-monitor watch --config shopify-monitor.config.js
-
-# Dry run to test configuration
-shopify-monitor check --dry-run --config shopify-monitor.config.js
-
-# Filter by category and keywords
-shopify-monitor check --slack URL --filter-categories API Apps --filter-keywords breaking deprecated
+# Or build first, then run
+npm run build
+npm start check -- --slack YOUR_WEBHOOK_URL
 ```
 
 ### Using Configuration File
 
-Create `shopify-monitor.config.js`:
+Create a `shopify-monitor.config.js` file in your project directory:
+
+> **Tip:** You can use the example config files in the `examples/` directory or create your own from scratch using the template below.
 
 ```javascript
 module.exports = {
@@ -206,7 +199,7 @@ Options:
 
 ```typescript
 import express from 'express';
-import { createShopifyMonitor, loadConfig } from 'shopify-changelog-monitor';
+import { createShopifyMonitor, loadConfig } from './src/middleware';
 
 const app = express();
 
@@ -360,7 +353,7 @@ High priority entries are marked with 🚨 in CLI output and logged prominently.
 
 ### Using Docker Compose (Recommended)
 
-1. Create `docker-compose.yml`:
+Create a `docker-compose.yml` file in the project directory:
 
 ```yaml
 version: '3.8'
@@ -433,27 +426,48 @@ Dry run mode will:
 
 ## Examples
 
-See the `examples/` directory for complete working examples:
-
-- `express-example.ts` - Express.js integration
-- `standalone-example.ts` - Standalone monitoring script
+Complete working examples are available in the `examples/` directory:
+- `examples/express-example.ts` - Express.js integration
+- `examples/standalone-example.ts` - Standalone monitoring script
 - `shopify-monitor.config.example.js` - Full config file example
 - `shopify-monitor.config.example.json` - JSON config example
 
 ## Development
 
-```bash
-# Install dependencies
-npm install
+Once you have the repository cloned and dependencies installed:
 
-# Build
+```bash
+# Build TypeScript source
 npm run build
 
-# Run in development
+# Run in development mode (using ts-node)
 npm run dev check -- --slack YOUR_WEBHOOK
-
-# Run with config
 npm run dev watch -- --config shopify-monitor.config.js
+
+# Run built version
+npm start check -- --slack YOUR_WEBHOOK
+
+# Link for local testing
+npm link
+
+# Test the linked version
+shopify-monitor --version
+```
+
+### Project Structure
+
+```
+shopify-monitor-cli/
+├── src/                    # TypeScript source files
+│   ├── cli.ts             # CLI entry point
+│   ├── config.ts          # Configuration management
+│   ├── fetcher.ts         # Changelog scraper
+│   ├── webhooks.ts        # Notification handlers
+│   ├── middleware.ts      # Express middleware
+│   └── types.ts           # TypeScript types
+├── dist/                  # Compiled JavaScript (generated)
+├── examples/              # Example implementations
+└── package.json
 ```
 
 ## Troubleshooting
