@@ -32,7 +32,7 @@
     "cli",
     "express-middleware"
   ],
-  "author": "",
+  "author": "Contra Collective (https://contracollective.com)",
   "license": "MIT",
   "repository": {
     "type": "git",
