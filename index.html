@@ -1,0 +1,996 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shopify Monitor CLI - Real-time Changelog Monitoring</title>
+    <meta name="description" content="A powerful CLI tool for monitoring Shopify changelog updates with Slack, Teams, Email notifications and smart filtering.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --glass-bg: rgba(255, 255, 255, 0.72);
+            --glass-border: rgba(255, 255, 255, 0.5);
+            --glass-shadow: rgba(0, 0, 0, 0.08);
+            --text-primary: #1d1d1f;
+            --text-secondary: #6e6e73;
+            --accent-blue: #0071e3;
+            --accent-purple: #bf5af2;
+            --accent-green: #34c759;
+            --accent-orange: #ff9500;
+            --gradient-start: #fbfbfd;
+            --gradient-end: #f5f5f7;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(180deg, #e8f4ff 0%, #fef6ff 25%, #fff8f0 50%, #f0fff4 75%, #f5f5f7 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+
+        /* Animated gradient orbs */
+        .orb {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.6;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .orb-1 {
+            width: 600px;
+            height: 600px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            top: -200px;
+            right: -100px;
+            animation: float1 20s ease-in-out infinite;
+        }
+
+        .orb-2 {
+            width: 500px;
+            height: 500px;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            bottom: 20%;
+            left: -150px;
+            animation: float2 25s ease-in-out infinite;
+        }
+
+        .orb-3 {
+            width: 400px;
+            height: 400px;
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            top: 50%;
+            right: -100px;
+            animation: float3 18s ease-in-out infinite;
+        }
+
+        .orb-4 {
+            width: 350px;
+            height: 350px;
+            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+            bottom: -100px;
+            left: 30%;
+            animation: float1 22s ease-in-out infinite reverse;
+        }
+
+        @keyframes float1 {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(30px, -50px) scale(1.05); }
+            66% { transform: translate(-20px, 20px) scale(0.95); }
+        }
+
+        @keyframes float2 {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(-40px, 30px) scale(1.1); }
+            66% { transform: translate(50px, -40px) scale(0.9); }
+        }
+
+        @keyframes float3 {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(-60px, 60px) scale(1.08); }
+        }
+
+        /* Glass card styling */
+        .glass {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            box-shadow:
+                0 4px 24px var(--glass-shadow),
+                0 1px 2px rgba(0, 0, 0, 0.04),
+                inset 0 1px 0 rgba(255, 255, 255, 0.6);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        /* Navigation */
+        nav {
+            position: fixed;
+            top: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            gap: 32px;
+        }
+
+        .nav-logo {
+            font-weight: 600;
+            font-size: 15px;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .nav-logo svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 24px;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            transition: color 0.2s ease;
+        }
+
+        .nav-links a:hover {
+            color: var(--text-primary);
+        }
+
+        .nav-cta {
+            background: var(--text-primary);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 980px;
+            font-size: 13px;
+            font-weight: 500;
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+
+        .nav-cta:hover {
+            background: #000;
+            transform: scale(1.02);
+        }
+
+        /* Hero Section */
+        .hero {
+            padding: 160px 24px 100px;
+            text-align: center;
+            position: relative;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 14px;
+            border-radius: 980px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--accent-blue);
+            margin-bottom: 24px;
+            background: rgba(0, 113, 227, 0.1);
+            border: 1px solid rgba(0, 113, 227, 0.2);
+        }
+
+        .hero-badge::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            background: var(--accent-green);
+            border-radius: 50%;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.2); }
+        }
+
+        h1 {
+            font-size: clamp(48px, 8vw, 80px);
+            font-weight: 700;
+            letter-spacing: -0.03em;
+            line-height: 1.05;
+            margin-bottom: 24px;
+            background: linear-gradient(135deg, var(--text-primary) 0%, #434343 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero-subtitle {
+            font-size: clamp(18px, 2.5vw, 24px);
+            color: var(--text-secondary);
+            max-width: 640px;
+            margin: 0 auto 40px;
+            font-weight: 400;
+            line-height: 1.5;
+        }
+
+        .hero-actions {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 16px 28px;
+            border-radius: 14px;
+            font-size: 16px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: none;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-blue) 0%, #0077ed 100%);
+            color: white;
+            box-shadow: 0 4px 16px rgba(0, 113, 227, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0, 113, 227, 0.4);
+        }
+
+        .btn-secondary {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            color: var(--text-primary);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.9);
+            transform: translateY(-2px);
+        }
+
+        /* Code Preview */
+        .code-preview {
+            margin: 80px auto 0;
+            max-width: 700px;
+            text-align: left;
+            padding: 24px;
+            font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+            font-size: 14px;
+            overflow-x: auto;
+            position: relative;
+        }
+
+        .code-preview::before {
+            content: '';
+            position: absolute;
+            top: 16px;
+            left: 20px;
+            display: flex;
+            gap: 8px;
+        }
+
+        .code-header {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .code-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .code-dot.red { background: #ff5f57; }
+        .code-dot.yellow { background: #febc2e; }
+        .code-dot.green { background: #28c840; }
+
+        .code-line {
+            display: block;
+            padding: 2px 0;
+            color: var(--text-secondary);
+        }
+
+        .code-line .prompt {
+            color: var(--accent-green);
+        }
+
+        .code-line .command {
+            color: var(--text-primary);
+        }
+
+        .code-line .flag {
+            color: var(--accent-purple);
+        }
+
+        .code-line .string {
+            color: var(--accent-orange);
+        }
+
+        .code-line .comment {
+            color: #8e8e93;
+        }
+
+        /* Features Section */
+        .features {
+            padding: 100px 24px;
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 64px;
+        }
+
+        .section-label {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--accent-blue);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 12px;
+        }
+
+        h2 {
+            font-size: clamp(32px, 5vw, 48px);
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            margin-bottom: 16px;
+        }
+
+        .section-desc {
+            font-size: 18px;
+            color: var(--text-secondary);
+            max-width: 560px;
+            margin: 0 auto;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 24px;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        .feature-card {
+            padding: 32px;
+            transition: all 0.3s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-4px);
+            box-shadow:
+                0 12px 40px var(--glass-shadow),
+                0 2px 4px rgba(0, 0, 0, 0.04);
+        }
+
+        .feature-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            font-size: 24px;
+        }
+
+        .feature-icon.blue { background: linear-gradient(135deg, #e0f0ff 0%, #c7e3ff 100%); }
+        .feature-icon.purple { background: linear-gradient(135deg, #f5e6ff 0%, #e8d4ff 100%); }
+        .feature-icon.green { background: linear-gradient(135deg, #e3f9e8 0%, #c8f5d2 100%); }
+        .feature-icon.orange { background: linear-gradient(135deg, #fff3e0 0%, #ffe4c4 100%); }
+        .feature-icon.pink { background: linear-gradient(135deg, #ffe6f0 0%, #ffd4e5 100%); }
+        .feature-icon.cyan { background: linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 100%); }
+
+        .feature-card h3 {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            letter-spacing: -0.01em;
+        }
+
+        .feature-card p {
+            color: var(--text-secondary);
+            font-size: 15px;
+            line-height: 1.6;
+        }
+
+        /* Integrations Section */
+        .integrations {
+            padding: 100px 24px;
+        }
+
+        .integrations-showcase {
+            display: flex;
+            justify-content: center;
+            gap: 32px;
+            flex-wrap: wrap;
+            margin-top: 48px;
+        }
+
+        .integration-item {
+            padding: 24px 40px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .integration-item:hover {
+            transform: scale(1.05);
+        }
+
+        .integration-icon {
+            width: 40px;
+            height: 40px;
+        }
+
+        .integration-name {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        /* Code Example Section */
+        .code-section {
+            padding: 100px 24px;
+        }
+
+        .code-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 0;
+            padding: 8px;
+            background: rgba(0, 0, 0, 0.03);
+            border-radius: 12px 12px 0 0;
+            width: fit-content;
+        }
+
+        .code-tab {
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: none;
+            background: transparent;
+        }
+
+        .code-tab.active {
+            background: white;
+            color: var(--text-primary);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        .code-block {
+            padding: 28px;
+            border-radius: 0 20px 20px 20px;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 14px;
+            line-height: 1.7;
+            overflow-x: auto;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .code-block pre {
+            margin: 0;
+            white-space: pre-wrap;
+        }
+
+        .code-keyword { color: #bf5af2; }
+        .code-string { color: #ff9500; }
+        .code-property { color: #0071e3; }
+        .code-comment { color: #8e8e93; }
+        .code-bracket { color: var(--text-secondary); }
+
+        /* CTA Section */
+        .cta {
+            padding: 100px 24px 120px;
+            text-align: center;
+        }
+
+        .cta-card {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 64px 48px;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.7) 100%);
+        }
+
+        .cta h2 {
+            margin-bottom: 16px;
+        }
+
+        .cta p {
+            color: var(--text-secondary);
+            font-size: 18px;
+            margin-bottom: 32px;
+        }
+
+        .install-command {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px 24px;
+            background: #1d1d1f;
+            border-radius: 12px;
+            margin-bottom: 32px;
+        }
+
+        .install-command code {
+            color: #00d084;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 15px;
+        }
+
+        .copy-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            padding: 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .copy-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .copy-btn svg {
+            width: 18px;
+            height: 18px;
+            color: #8e8e93;
+        }
+
+        /* Footer */
+        footer {
+            padding: 40px 24px;
+            text-align: center;
+            border-top: 1px solid rgba(0, 0, 0, 0.06);
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 32px;
+            margin-bottom: 24px;
+        }
+
+        .footer-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 14px;
+            transition: color 0.2s ease;
+        }
+
+        .footer-links a:hover {
+            color: var(--text-primary);
+        }
+
+        .footer-copy {
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            nav {
+                padding: 10px 16px;
+                gap: 16px;
+            }
+
+            .nav-links {
+                display: none;
+            }
+
+            .hero {
+                padding: 140px 20px 80px;
+            }
+
+            .code-preview {
+                margin: 60px 20px 0;
+                padding: 20px;
+                font-size: 12px;
+            }
+
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .integrations-showcase {
+                gap: 16px;
+            }
+
+            .integration-item {
+                padding: 16px 24px;
+            }
+
+            .cta-card {
+                padding: 40px 24px;
+            }
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 0, 0, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <!-- Animated gradient orbs -->
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+    <div class="orb orb-4"></div>
+
+    <!-- Navigation -->
+    <nav class="glass">
+        <div class="nav-logo">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+            </svg>
+            Shopify Monitor
+        </div>
+        <ul class="nav-links">
+            <li><a href="#features">Features</a></li>
+            <li><a href="#integrations">Integrations</a></li>
+            <li><a href="#usage">Usage</a></li>
+            <li><a href="https://github.com/Contra-Collective/shopify-monitor-cli">Docs</a></li>
+        </ul>
+        <a href="https://github.com/Contra-Collective/shopify-monitor-cli" class="nav-cta">
+            View on GitHub
+        </a>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <span class="hero-badge">Open Source & Free</span>
+            <h1>Never miss a<br>Shopify update</h1>
+            <p class="hero-subtitle">
+                A powerful CLI tool that monitors Shopify changelog and instantly notifies your team via Slack, Teams, or Email when important changes happen.
+            </p>
+            <div class="hero-actions">
+                <a href="https://github.com/Contra-Collective/shopify-monitor-cli" class="btn btn-primary">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+                    </svg>
+                    Get Started
+                </a>
+                <a href="#usage" class="btn btn-secondary">
+                    See Examples
+                </a>
+            </div>
+
+            <!-- Code Preview -->
+            <div class="code-preview glass">
+                <div class="code-header">
+                    <span class="code-dot red"></span>
+                    <span class="code-dot yellow"></span>
+                    <span class="code-dot green"></span>
+                </div>
+                <span class="code-line">
+                    <span class="comment"># Install globally</span>
+                </span>
+                <span class="code-line">
+                    <span class="prompt">$</span> <span class="command">npm install</span> <span class="flag">-g</span> <span class="string">shopify-changelog-monitor</span>
+                </span>
+                <span class="code-line">&nbsp;</span>
+                <span class="code-line">
+                    <span class="comment"># Start watching for updates</span>
+                </span>
+                <span class="code-line">
+                    <span class="prompt">$</span> <span class="command">shopify-monitor watch</span> <span class="flag">--slack</span> <span class="string">$WEBHOOK_URL</span>
+                </span>
+                <span class="code-line">&nbsp;</span>
+                <span class="code-line">
+                    <span class="comment" style="color: var(--accent-green);">✓ Monitoring started - checking every 15 minutes</span>
+                </span>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features" id="features">
+        <div class="container">
+            <div class="section-header">
+                <p class="section-label">Features</p>
+                <h2>Everything you need</h2>
+                <p class="section-desc">Powerful features to keep your team informed about every Shopify platform change.</p>
+            </div>
+
+            <div class="features-grid">
+                <div class="feature-card glass">
+                    <div class="feature-icon blue">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="2">
+                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                            <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                        </svg>
+                    </div>
+                    <h3>Real-time Notifications</h3>
+                    <p>Get instant alerts when Shopify publishes new changelog entries. Never be caught off-guard by breaking changes.</p>
+                </div>
+
+                <div class="feature-card glass">
+                    <div class="feature-icon purple">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#bf5af2" stroke-width="2">
+                            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+                        </svg>
+                    </div>
+                    <h3>Smart Filtering</h3>
+                    <p>Filter by categories, keywords, or exclusions. Only get notified about the updates that matter to your team.</p>
+                </div>
+
+                <div class="feature-card glass">
+                    <div class="feature-icon green">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#34c759" stroke-width="2">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                            <path d="M9 12l2 2 4-4"/>
+                        </svg>
+                    </div>
+                    <h3>Priority Detection</h3>
+                    <p>Automatically flags critical updates like breaking changes, security patches, and deprecations.</p>
+                </div>
+
+                <div class="feature-card glass">
+                    <div class="feature-icon orange">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ff9500" stroke-width="2">
+                            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+                            <line x1="8" y1="21" x2="16" y2="21"/>
+                            <line x1="12" y1="17" x2="12" y2="21"/>
+                        </svg>
+                    </div>
+                    <h3>Express Middleware</h3>
+                    <p>Seamlessly integrate into your Node.js applications with our Express middleware support.</p>
+                </div>
+
+                <div class="feature-card glass">
+                    <div class="feature-icon pink">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ff2d55" stroke-width="2">
+                            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                            <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+                            <line x1="12" y1="22.08" x2="12" y2="12"/>
+                        </svg>
+                    </div>
+                    <h3>Docker Ready</h3>
+                    <p>Deploy anywhere with our Docker support. Run as a container with persistent state tracking.</p>
+                </div>
+
+                <div class="feature-card glass">
+                    <div class="feature-icon cyan">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#00b4d8" stroke-width="2">
+                            <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+                        </svg>
+                    </div>
+                    <h3>Flexible Config</h3>
+                    <p>Use JSON or JavaScript config files. Override settings via CLI flags or environment variables.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Integrations Section -->
+    <section class="integrations" id="integrations">
+        <div class="container">
+            <div class="section-header">
+                <p class="section-label">Integrations</p>
+                <h2>Works with your stack</h2>
+                <p class="section-desc">Send notifications to the tools your team already uses every day.</p>
+            </div>
+
+            <div class="integrations-showcase">
+                <div class="integration-item glass">
+                    <svg class="integration-icon" viewBox="0 0 24 24" fill="#4A154B">
+                        <path d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zM6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zM8.834 6.313a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312zM18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zM17.688 8.834a2.528 2.528 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.165 0a2.528 2.528 0 0 1 2.523 2.522v6.312zM15.165 18.956a2.528 2.528 0 0 1 2.523 2.522A2.528 2.528 0 0 1 15.165 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52zM15.165 17.688a2.527 2.527 0 0 1-2.52-2.523 2.526 2.526 0 0 1 2.52-2.52h6.313A2.527 2.527 0 0 1 24 15.165a2.528 2.528 0 0 1-2.522 2.523h-6.313z"/>
+                    </svg>
+                    <span class="integration-name">Slack</span>
+                </div>
+
+                <div class="integration-item glass">
+                    <svg class="integration-icon" viewBox="0 0 24 24" fill="#6264A7">
+                        <path d="M20.625 10.75h-7.375v-7.375c0-.345-.28-.625-.625-.625h-1.25c-.345 0-.625.28-.625.625v7.375h-7.375c-.345 0-.625.28-.625.625v1.25c0 .345.28.625.625.625h7.375v7.375c0 .345.28.625.625.625h1.25c.345 0 .625-.28.625-.625v-7.375h7.375c.345 0 .625-.28.625-.625v-1.25c0-.345-.28-.625-.625-.625z"/>
+                    </svg>
+                    <span class="integration-name">Teams</span>
+                </div>
+
+                <div class="integration-item glass">
+                    <svg class="integration-icon" viewBox="0 0 24 24" fill="#EA4335">
+                        <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
+                    </svg>
+                    <span class="integration-name">Email</span>
+                </div>
+
+                <div class="integration-item glass">
+                    <svg class="integration-icon" viewBox="0 0 24 24" fill="#06AC38">
+                        <path d="M18.42 3.91L12 0 5.58 3.91 12 7.82l6.42-3.91zM4.5 5.21v8.58L11 17.7V9.12L4.5 5.21zm15 0L13 9.12v8.58l6.5-3.91V5.21zM5.58 20.09L12 24l6.42-3.91L12 16.18l-6.42 3.91z"/>
+                    </svg>
+                    <span class="integration-name">Webhooks</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Code Example Section -->
+    <section class="code-section" id="usage">
+        <div class="container">
+            <div class="section-header">
+                <p class="section-label">Usage</p>
+                <h2>Simple configuration</h2>
+                <p class="section-desc">Get started with a simple config file or use CLI flags for quick setup.</p>
+            </div>
+
+            <div style="max-width: 800px; margin: 0 auto;">
+                <div class="code-tabs">
+                    <button class="code-tab active">Config File</button>
+                    <button class="code-tab">CLI</button>
+                </div>
+                <div class="code-block glass">
+                    <pre><span class="code-comment">// shopify-monitor.config.js</span>
+<span class="code-keyword">module</span>.<span class="code-property">exports</span> <span class="code-bracket">=</span> <span class="code-bracket">{</span>
+  <span class="code-property">webhooks</span>: <span class="code-bracket">{</span>
+    <span class="code-property">slack</span>: <span class="code-bracket">[</span><span class="code-string">'https://hooks.slack.com/...'</span><span class="code-bracket">]</span>,
+    <span class="code-property">teams</span>: <span class="code-bracket">[</span><span class="code-string">'https://outlook.office.com/...'</span><span class="code-bracket">]</span>,
+  <span class="code-bracket">}</span>,
+  <span class="code-property">checkInterval</span>: <span class="code-string">15</span>,
+  <span class="code-property">filters</span>: <span class="code-bracket">{</span>
+    <span class="code-property">categories</span>: <span class="code-bracket">[</span><span class="code-string">'API'</span>, <span class="code-string">'Apps'</span><span class="code-bracket">]</span>,
+    <span class="code-property">keywords</span>: <span class="code-bracket">[</span><span class="code-string">'breaking'</span>, <span class="code-string">'deprecated'</span><span class="code-bracket">]</span>,
+  <span class="code-bracket">}</span>
+<span class="code-bracket">}</span>;</pre>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta">
+        <div class="cta-card glass">
+            <h2>Start monitoring today</h2>
+            <p>Free, open-source, and ready to keep your team informed.</p>
+            <div class="install-command">
+                <code>npm install -g shopify-changelog-monitor</code>
+                <button class="copy-btn" onclick="copyCommand()" title="Copy to clipboard">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="hero-actions">
+                <a href="https://github.com/Contra-Collective/shopify-monitor-cli" class="btn btn-primary">
+                    View Documentation
+                </a>
+                <a href="https://github.com/Contra-Collective/shopify-monitor-cli/issues" class="btn btn-secondary">
+                    Report an Issue
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-links">
+            <a href="https://github.com/Contra-Collective/shopify-monitor-cli">GitHub</a>
+            <a href="https://github.com/Contra-Collective/shopify-monitor-cli#readme">Documentation</a>
+            <a href="https://github.com/Contra-Collective/shopify-monitor-cli/issues">Issues</a>
+            <a href="https://github.com/Contra-Collective/shopify-monitor-cli/blob/main/LICENSE">License</a>
+        </div>
+        <p class="footer-copy">Made with care by Contra Collective. Open source under MIT License.</p>
+    </footer>
+
+    <script>
+        function copyCommand() {
+            navigator.clipboard.writeText('npm install -g shopify-changelog-monitor');
+            const btn = document.querySelector('.copy-btn');
+            btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="#34c759" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>';
+            setTimeout(() => {
+                btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+            }, 2000);
+        }
+
+        // Tab switching
+        document.querySelectorAll('.code-tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                document.querySelectorAll('.code-tab').forEach(t => t.classList.remove('active'));
+                this.classList.add('active');
+
+                const codeBlock = document.querySelector('.code-block pre');
+                if (this.textContent === 'CLI') {
+                    codeBlock.innerHTML = `<span class="code-comment"># One-time check with Slack notification</span>
+<span class="code-keyword">$</span> shopify-monitor check --slack <span class="code-string">$WEBHOOK_URL</span>
+
+<span class="code-comment"># Continuous monitoring with filters</span>
+<span class="code-keyword">$</span> shopify-monitor watch \\
+    --interval <span class="code-string">15</span> \\
+    --slack <span class="code-string">$SLACK_URL</span> \\
+    --filter-categories <span class="code-string">API Apps</span> \\
+    --filter-keywords <span class="code-string">breaking deprecated</span>
+
+<span class="code-comment"># List recent changelog entries</span>
+<span class="code-keyword">$</span> shopify-monitor list --limit <span class="code-string">10</span>`;
+                } else {
+                    codeBlock.innerHTML = `<span class="code-comment">// shopify-monitor.config.js</span>
+<span class="code-keyword">module</span>.<span class="code-property">exports</span> <span class="code-bracket">=</span> <span class="code-bracket">{</span>
+  <span class="code-property">webhooks</span>: <span class="code-bracket">{</span>
+    <span class="code-property">slack</span>: <span class="code-bracket">[</span><span class="code-string">'https://hooks.slack.com/...'</span><span class="code-bracket">]</span>,
+    <span class="code-property">teams</span>: <span class="code-bracket">[</span><span class="code-string">'https://outlook.office.com/...'</span><span class="code-bracket">]</span>,
+  <span class="code-bracket">}</span>,
+  <span class="code-property">checkInterval</span>: <span class="code-string">15</span>,
+  <span class="code-property">filters</span>: <span class="code-bracket">{</span>
+    <span class="code-property">categories</span>: <span class="code-bracket">[</span><span class="code-string">'API'</span>, <span class="code-string">'Apps'</span><span class="code-bracket">]</span>,
+    <span class="code-property">keywords</span>: <span class="code-bracket">[</span><span class="code-string">'breaking'</span>, <span class="code-string">'deprecated'</span><span class="code-bracket">]</span>,
+  <span class="code-bracket">}</span>
+<span class="code-bracket">}</span>;`;
+                }
+            });
+        });
+
+        // Smooth scroll for navigation links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function(e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            });
+        });
+    </script>
+</body>
+</html>
